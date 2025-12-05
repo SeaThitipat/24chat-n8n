@@ -263,13 +263,13 @@
 
     <script>
         // const API_BASE = 'http://localhost:5678/webhook';
-        const API_BASE = 'https://gigglingly-zanies-season.ngrok-free.dev/webhook';
+        const API_Base = 'https://gigglingly-zanies-season.ngrok-free.dev/webhook';
 
         document.addEventListener('DOMContentLoaded', loadData);
 
         async function loadData() {
             try {
-                const res = await fetch(`${API_BASE}/getData`);
+                const res = await fetch(`${API_Base}/getData`);
                 if (!res.ok) {
                     throw new Error(`HTTP error! status: ${res.status}`);
                 }
