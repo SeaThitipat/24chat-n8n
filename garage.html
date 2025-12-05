@@ -129,11 +129,17 @@
 
     async function loadData() {
         try {
-            const res = await fetch(`${API_BASE}/getData`);
+            const res = await fetch(`${API_B}/getData`);
+            if (!res.ok) {
+                throw new Error(`HTTP error! status: ${res.status}`);
+            }
             const data = await res.json();
             renderGrid(data);
         } catch(e) { 
             console.error("Error loading data", e); 
+            // Display a user-friendly error message on the page
+            const grid = document.getElementById('grid');
+            grid.innerHTML = '<p style="color: red;">Failed to load car data. Please check the API connection.</p>';
         }
     }
 
