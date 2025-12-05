@@ -1,0 +1,6 @@
+{
+  "rewrites": [
+    { "source": "/", "destination": "/chat.html" },
+    { "source": "/garage", "destination": "/garage.html" }
+  ]
+}
