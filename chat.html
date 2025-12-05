@@ -1,0 +1,517 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>24CarFix - Chat</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <style>
+        /* --- CSS styles (Embedded) --- */
+        :root {
+            --primary-orange: #ff8c00;
+            --dark-bg: #1e1e1e;
+            --sidebar-bg: #121212;
+            --text-white: #ffffff;
+            --chat-bg: #f5f5f5;
+            --bot-bubble: #ffffff;
+            --user-bubble: #ff8c00;
+        }
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', 'Sarabun', sans-serif; }
+        body { height: 100vh; display: flex; overflow: hidden; }
+        
+        /* Layout */
+        .container { display: flex; width: 100%; height: 100%; }
+        
+        .sidebar { 
+            width: 250px; 
+            background: var(--sidebar-bg); 
+            color: var(--text-white); 
+            padding: 20px; 
+            display: flex; 
+            flex-direction: column; 
+            flex-shrink: 0; 
+        }
+
+        .brand { font-size: 1.2rem; font-weight: bold; margin-bottom: 30px; color: var(--primary-orange); }
+        .menu ul { list-style: none; }
+        .menu li { padding: 10px; cursor: pointer; color: #b0b0b0; margin-bottom: 5px; border-radius: 5px; transition: 0.3s; }
+        .menu li:hover, .menu li.active { background: #333; color: white; }
+        .menu a { text-decoration: none; color: inherit; display: block; }
+
+        .main-content { 
+            flex: 1; 
+            background: var(--chat-bg); 
+            display: flex; 
+            flex-direction: column;
+            min-width: 0; 
+        }
+        
+        /* Header */
+        .top-header { background: linear-gradient(90deg, #ff8c00, #ff6a00); padding: 20px; color: white; display: flex; justify-content: space-between; align-items: center; }
+        .header-actions i { font-size: 1.5rem; cursor: pointer; }
+
+        /* Chat Area */
+        .chat-container { flex: 1; padding: 20px; overflow-y: auto; display: flex; flex-direction: column; gap: 15px; }
+        .message { display: flex; gap: 10px; max-width: 80%; }
+        .message.user { align-self: flex-end; flex-direction: row-reverse; }
+        .avatar { width: 40px; height: 40px; border-radius: 50%; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+        .message.bot .avatar { background: #ffecb3; color: #ff8c00; }
+        .message.user .avatar { background: #333; color: white; }
+        
+        /* Bubble Styling */
+        .bubble { 
+            padding: 12px 16px; 
+            border-radius: 15px; 
+            font-size: 0.95rem; 
+            line-height: 1.4; 
+            box-shadow: 0 1px 2px rgba(0,0,0,0.1); 
+            white-space: pre-wrap; 
+            overflow: hidden; 
+            word-wrap: break-word;
+        }
+        .message.bot .bubble { background: var(--bot-bubble); color: #333; border-top-left-radius: 2px; }
+        .message.user .bubble { background: var(--user-bubble); color: white; border-top-right-radius: 2px; }
+
+        /* Inputs */
+        .input-area { padding: 15px; background: white; display: flex; gap: 10px; border-top: 1px solid #ddd; }
+        .input-area input { flex: 1; padding: 12px; border: 1px solid #ddd; border-radius: 25px; outline: none; }
+        .input-area button { width: 50px; height: 50px; border-radius: 50%; border: none; background: var(--primary-orange); color: white; cursor: pointer; font-size: 1.2rem; }
+        .input-area button:disabled { background: #ccc; }
+
+        /* Tables & Scrolls */
+        .data-table { width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 0.9rem; }
+        .data-table th, .data-table td { border: 1px solid #ddd; padding: 8px; text-align: left; }
+        .data-table th { background: #f2f2f2; }
+        
+        .horizontal-scroll { 
+            display: flex; 
+            overflow-x: auto; 
+            gap: 10px; 
+            padding-bottom: 5px; 
+            width: 100%;
+            white-space: normal;
+        }
+        
+        .scroll-card { 
+            min-width: 180px; 
+            max-width: 200px;
+            background: white; 
+            padding: 10px; 
+            border-radius: 8px; 
+            border: 1px solid #ddd; 
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            display: flex;
+            flex-direction: column;
+            justify-content: flex-start;
+            cursor: pointer;
+            transition: transform 0.2s;
+            flex-shrink: 0;
+        }
+
+        .scroll-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 5px 10px rgba(0,0,0,0.1);
+        }
+
+        .car-name-text { font-size: 1.1rem; font-weight: bold; margin-bottom: 5px; color: #333; line-height: 1.2; }
+        .car-detail-text { color: #666; font-size: 0.85rem; line-height: 1.2; }
+
+        /* --- Global Modal Styling --- */
+        .modal { 
+            display: none; 
+            position: fixed; 
+            z-index: 1000; 
+            left: 0;
+            top: 0;
+            width: 100%; 
+            height: 100%; 
+            background-color: rgba(0,0,0,0.6); 
+            backdrop-filter: blur(2px);
+        }
+
+        .modal-content {
+            background-color: #fefefe;
+            margin: 10% auto; 
+            padding: 25px;
+            border: 1px solid #888;
+            width: 90%;
+            max-width: 400px;
+            border-radius: 12px;
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+            position: relative;
+        }
+
+        .close-modal {
+            color: #aaa;
+            position: absolute;
+            top: 10px;
+            right: 15px;
+            font-size: 28px;
+            font-weight: bold;
+            cursor: pointer;
+        }
+        .close-modal:hover { color: #333; }
+
+        .modal-img { width: 100%; height: 200px; object-fit: cover; border-radius: 8px; }
+        .modal-title { font-size: 1.4rem; font-weight: bold; color: #333; margin-top: 5px; }
+        .modal-desc { color: #666; line-height: 1.6; font-size: 0.95rem; max-height: 150px; overflow-y: auto; }
+
+        /* --- Station Modal Specific Styling (ตามรูปวาด) --- */
+        .station-layout {
+            display: flex;
+            gap: 15px;
+            margin-top: 10px;
+        }
+        .station-img-box {
+            width: 120px;
+            height: 100px;
+            flex-shrink: 0;
+        }
+        .station-img-box img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            border-radius: 8px;
+            border: 1px solid #ddd;
+        }
+        .station-info-box {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            gap: 5px;
+        }
+        .st-info-row {
+            font-size: 0.9rem;
+            color: #555;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+        .st-rating {
+            margin-top: 5px;
+            font-size: 0.9rem;
+            color: #ffc107;
+            font-weight: bold;
+        }
+
+        /* --- Buttons --- */
+        .order-btn {
+            background-color: var(--primary-orange);
+            color: white;
+            padding: 12px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 1rem;
+            font-weight: bold;
+            text-align: center;
+            transition: background 0.3s;
+            width: 100%;
+        }
+        .order-btn:hover { background-color: #e67e00; }
+
+        .btn-group-row {
+            display: flex;
+            gap: 10px;
+            margin-top: 10px;
+        }
+        .btn-map {
+            background-color: #f0f0f0;
+            color: #333;
+            border: 1px solid #ccc;
+            flex: 1;
+        }
+        .btn-map:hover { background-color: #e0e0e0; }
+        .btn-book {
+            background-color: var(--primary-orange);
+            color: white;
+            border: none;
+            flex: 1.2; /* ให้ปุ่มจองใหญ่กว่านิดนึง */
+        }
+        .btn-book:hover { background-color: #e67e00; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <aside class="sidebar">
+        <div class="brand"><i class="fas fa-car-side"></i> 24CarFix</div>
+        <nav class="menu">
+            <ul>
+                <li class="active"><a href="chat.html"><i class="fas fa-comments"></i> แชทบอท</a></li>
+                <li><a href="garage.html"><i class="fas fa-book"></i> My Garage</a></li>
+            </ul>
+        </nav>
+    </aside>
+
+    <main class="main-content">
+        <header class="top-header">
+            <div>
+                <h1><i class="fas fa-robot"></i> AI Assistant</h1>
+                <p>รถที่เลือก: <span id="current-car">กำลังโหลด...</span></p>
+            </div>
+            <div class="header-actions">
+                <a href="garage.html" style="color:white;"><i class="fas fa-ellipsis-v"></i></a>
+            </div>
+        </header>
+
+        <div class="chat-container" id="chat-container">
+            <div class="message bot">
+                <div class="avatar"><i class="fas fa-robot"></i></div>
+                <div class="bubble">สวัสดีครับ มีอะไรให้ผมช่วยเรื่องรถวันนี้ไหมครับ?</div>
+            </div>
+        </div>
+
+        <div class="input-area">
+            <input type="text" id="user-input" placeholder="พิมพ์ข้อความ..." onkeypress="handleEnter(event)">
+            <button id="send-btn" onclick="sendMessage()"><i class="fas fa-paper-plane"></i></button>
+        </div>
+    </main>
+</div>
+
+<div id="productModal" class="modal">
+    <div class="modal-content">
+        <span class="close-modal" onclick="closeProductModal()">&times;</span>
+        <img id="p-modal-img" class="modal-img" src="" alt="Product Image">
+        <div id="p-modal-title" class="modal-title">ชื่อสินค้า</div>
+        <div class="modal-desc">
+            Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. 
+        </div>
+        <button class="order-btn" onclick="orderProduct()">สั่งซื้อสินค้า</button>
+    </div>
+</div>
+
+<div id="stationModal" class="modal">
+    <div class="modal-content">
+        <span class="close-modal" onclick="closeStationModal()">&times;</span>
+        <div id="st-modal-title" class="modal-title" style="margin-bottom:5px;">ชื่ออู่</div>
+        
+        <div class="station-layout">
+            <div class="station-img-box">
+                <img id="st-modal-img" src="" alt="Station Image">
+            </div>
+            <div class="station-info-box">
+                <div class="st-info-row">
+                    <i class="fas fa-map-marker-alt" style="color:red; width:15px;"></i>
+                    <span id="st-modal-loc">Location</span>
+                </div>
+                <div class="st-info-row">
+                    <i class="fas fa-tools" style="color:var(--primary-orange); width:15px;"></i>
+                    <span id="st-modal-high">Highlights</span>
+                </div>
+                <div class="st-rating">
+                    <span id="st-modal-stars"></span>
+                    <span id="st-modal-rate-num" style="color:#666; font-size:0.8rem; margin-left:5px;"></span>
+                </div>
+            </div>
+        </div>
+
+        <div class="btn-group-row">
+            <button class="order-btn btn-map" onclick="openGoogleMap()">Google Map</button>
+            <button class="order-btn btn-book" onclick="bookStation()">จองผ่าน 24carfix!</button>
+        </div>
+    </div>
+</div>
+
+<script>
+    const API_BASE = 'https://f673851dfcad.ngrok-free.app/webhook';
+    let selectedBrand = localStorage.getItem('selectedBrand');
+
+    document.addEventListener('DOMContentLoaded', async () => {
+        if (!selectedBrand) {
+            try {
+                const res = await fetch(`${API_BASE}/getData`);
+                if(res.ok) {
+                    const data = await res.json();
+                    if (data.length > 0) {
+                        selectedBrand = data[0].carmodel;
+                        localStorage.setItem('selectedBrand', selectedBrand);
+                    }
+                }
+            } catch(e) { console.error(e); }
+        }
+        document.getElementById('current-car').innerText = selectedBrand || "ไม่ระบุ";
+    });
+
+    function handleEnter(e) { if (e.key === 'Enter') sendMessage(); }
+
+    async function sendMessage() {
+        const input = document.getElementById('user-input');
+        const btn = document.getElementById('send-btn');
+        const text = input.value.trim();
+        if (!text) return;
+
+        addBubble(text, 'user');
+        input.value = '';
+        input.disabled = true; btn.disabled = true;
+
+        try {
+            const res = await fetch(`${API_BASE}/action`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ message: text, selectedBrand: selectedBrand })
+            });
+
+            const rawText = await res.text();
+            if(!rawText) throw new Error("Server response empty");
+
+            const data = JSON.parse(rawText);
+            handleResponse(data);
+        } catch (e) {
+            console.error(e);
+            addBubble("Error Connecting Server: กรุณาตรวจสอบการเชื่อมต่อ", 'bot');
+        }
+
+        input.disabled = false; btn.disabled = false;
+        input.focus();
+    }
+
+    function handleResponse(data) {
+        let content = '';
+        if (Array.isArray(data)) data = data[0]; 
+        const type = data.responseType || data.actionType;
+
+        switch(type) {
+            case 'normal': content = data.output; break;
+            case 'create': 
+            case 'delete':
+                content = `${type === 'create' ? 'เพิ่ม' : 'ลบ'}ข้อมูลเรียบร้อย:<br>` + renderTable(data.data);
+                break;
+            case 'show': content = renderCarScroll(data.data); break;
+            case 'recommend': content = renderProductScroll(data.products); break;
+            case 'find_station':
+                content = 'รายชื่ออู่แนะนำบริเวณใกล้เคียงครับ:<br>' + renderStationScroll(data.data);
+                break;
+            default: content = JSON.stringify(data);
+        }
+        addBubble(content, 'bot', true);
+    }
+
+    function addBubble(text, sender, isHtml = false) {
+        const div = document.createElement('div');
+        div.className = `message ${sender}`;
+        div.innerHTML = `
+            <div class="avatar"><i class="fas fa-${sender==='bot'?'robot':'user'}"></i></div>
+            <div class="bubble">${isHtml ? text : text.replace(/\n/g, '<br>')}</div>
+        `;
+        document.getElementById('chat-container').appendChild(div);
+        document.getElementById('chat-container').scrollTop = 9999;
+    }
+
+    function renderTable(obj) {
+        if(!obj) return "";
+        let html = '<table class="data-table">';
+        for(let k in obj) html += `<tr><th>${k}</th><td>${obj[k]}</td></tr>`;
+        return html + '</table>';
+    }
+
+    function renderCarScroll(list) {
+        if(!list || !Array.isArray(list)) return "<i>ไม่มีข้อมูลรถ</i>";
+        const items = list.map(c => 
+            `<div class="scroll-card">` +
+                `<div class="car-name-text">${c.name || 'ไม่มีชื่อ'}</div>` +
+                `<div class="car-detail-text">${c.carmodel} (${c.caryear})</div>` +
+            `</div>`
+        ).join('');
+        return `<div class="horizontal-scroll">${items}</div>`;
+    }
+
+    function renderProductScroll(list) {
+        if (!list || !Array.isArray(list)) {
+            return `<div style="color:red;">ไม่พบข้อมูลสินค้าแนะนำ</div>`;
+        }
+        const items = list.map(p => {
+            const encodedName = encodeURIComponent(p);
+            const mockImgUrl = `https://placehold.co/300x200/ff8c00/ffffff?text=Product`;
+            return `<div class="scroll-card" onclick="openProductModal('${p}', '${mockImgUrl}')" style="padding:10px; min-width:160px;">` +
+                `<img src="${mockImgUrl}" alt="${p}" style="width:100%; height:100px; object-fit:cover; border-radius:5px; margin-bottom:8px;">` +
+                `<div style="font-weight:bold; font-size:0.9rem; color:#333; text-align:center; line-height:1.2;">${p}</div>` +
+            `</div>`;
+        }).join('');
+        return `<div class="horizontal-scroll">${items}</div>`;
+    }
+
+    function renderStationScroll(list) {
+        if (!list || !Array.isArray(list)) return "<i>ไม่พบข้อมูลอู่</i>";
+        const items = list.map(s => {
+            // เตรียมข้อมูลสำหรับส่งเข้า Modal
+            const mockImgUrl = `https://placehold.co/300x200/333333/ffffff?text=Garage`;
+            
+            // Escape single quotes เพื่อป้องกัน Error ใน onclick
+            const safeName = s.name.replace(/'/g, "\\'");
+            const safeLoc = s.location.replace(/'/g, "\\'");
+            const safeHigh = s.highlights.replace(/'/g, "\\'");
+
+            return `<div class="scroll-card" onclick="openStationModal('${safeName}', '${safeLoc}', '${safeHigh}', ${s.rating_review}, '${mockImgUrl}')" style="min-width: 220px; align-items: flex-start; padding: 15px;">
+                <div style="font-weight:bold; font-size:1.1rem; color:#333; margin-bottom: 5px;">${s.name}</div>
+                <div style="font-size:0.9rem; color:#666; margin-bottom: 5px;">
+                    <i class="fas fa-map-marker-alt" style="color:red; width:15px;"></i> ${s.location}
+                </div>
+                <div style="font-size:0.9rem; font-weight:bold; color:#333; margin-top: auto;">
+                    <i class="fas fa-star" style="color:#ffc107;"></i> ${s.rating_review}
+                </div>
+            </div>`;
+        }).join('');
+        return `<div class="horizontal-scroll">${items}</div>`;
+    }
+
+    // --- Modal Logic ---
+    const productModal = document.getElementById('productModal');
+    const stationModal = document.getElementById('stationModal');
+
+    // Product Functions
+    function openProductModal(name, imgSrc) {
+        document.getElementById('p-modal-title').innerText = name;
+        document.getElementById('p-modal-img').src = imgSrc;
+        productModal.style.display = "block";
+    }
+    function closeProductModal() { productModal.style.display = "none"; }
+    function orderProduct() {
+        const productName = document.getElementById('p-modal-title').innerText;
+        closeProductModal();
+        addBubble(`ได้รับคำสั่งซื้อ "${productName}" เรียบร้อยแล้วครับ เจ้าหน้าที่จะติดต่อกลับเร็วๆ นี้`, 'bot');
+    }
+
+    // Station Functions
+    function openStationModal(name, loc, high, rate, img) {
+        document.getElementById('st-modal-title').innerText = name;
+        document.getElementById('st-modal-loc').innerText = loc;
+        document.getElementById('st-modal-high').innerText = high;
+        document.getElementById('st-modal-img').src = img;
+        document.getElementById('st-modal-rate-num').innerText = rate + " / 5.0";
+        
+        // สร้างดาว
+        let starsHtml = '';
+        for(let i=1; i<=5; i++) {
+            if(i <= Math.round(rate)) starsHtml += '<i class="fas fa-star"></i>';
+            else starsHtml += '<i class="far fa-star" style="color:#ccc;"></i>';
+        }
+        document.getElementById('st-modal-stars').innerHTML = starsHtml;
+
+        stationModal.style.display = "block";
+    }
+    function closeStationModal() { stationModal.style.display = "none"; }
+    
+    function openGoogleMap() {
+        const loc = document.getElementById('st-modal-loc').innerText;
+        window.open(`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(loc)}`, '_blank');
+    }
+    
+    function bookStation() {
+        const name = document.getElementById('st-modal-title').innerText;
+        closeStationModal();
+        addBubble(`ทำการจองคิวที่ "${name}" เรียบร้อยแล้วครับ!`, 'bot');
+    }
+
+    // Close on click outside
+    window.onclick = function(event) {
+        if (event.target == productModal) closeProductModal();
+        if (event.target == stationModal) closeStationModal();
+    }
+</script>
+</body>
+</html>
